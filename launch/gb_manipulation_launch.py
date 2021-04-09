@@ -36,16 +36,6 @@ def generate_launch_description():
     stdout_linebuf_envvar = SetEnvironmentVariable(
         'RCUTILS_CONSOLE_STDOUT_LINE_BUFFERED', '1')
 
-    plansys2_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-            get_package_share_directory('plansys2_bringup'),
-            'launch',
-            'plansys2_bringup_launch_monolithic.py')),
-        launch_arguments={
-          'model_file': example_dir + '/pddl/domain.pddl',
-          'namespace': namespace
-          }.items())
-
     # Specify the actions
     pick_1_cmd = Node(
         package='plansys2_bt_actions',
@@ -60,16 +50,27 @@ def generate_launch_description():
             'bt_xml_file': example_dir + '/behavior_trees_xml/pick.xml'
           }
         ])
+    place_1_cmd = Node(
+        package='plansys2_bt_actions',
+        executable='bt_action_node',
+        name='pick_1',
+        namespace=namespace,
+        output='screen',
+        parameters=[
+          example_dir + '/config/params.yaml',
+          {
+            'action_name': 'place',
+            'bt_xml_file': example_dir + '/behavior_trees_xml/place.xml'
+          }
+        ])
 
     ld = LaunchDescription()
 
     # Set environment variables
     ld.add_action(stdout_linebuf_envvar)
     ld.add_action(declare_namespace_cmd)
-
+    
     # Declare the launch options
-    ld.add_action(plansys2_cmd)
-
     ld.add_action(pick_1_cmd)
   
     return ld

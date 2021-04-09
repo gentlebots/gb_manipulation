@@ -2,7 +2,7 @@
     <BehaviorTree ID="MainTree">
        <Sequence name="root_sequence">
            <Pick  name="pick" goal="${arg1}"/>
-           <Place name="place" goal="${arg1}"/>
+           <!--<Place name="place" goal="${arg1}"/>-->
        </Sequence>
     </BehaviorTree>
 </root>

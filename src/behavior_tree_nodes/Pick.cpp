@@ -33,6 +33,14 @@ Pick::Pick(
     "/moveit/result",
     1,
     std::bind(&Pick::resultCallback, this, std::placeholders::_1));
+  graph_ = std::make_shared<ros2_knowledge_graph::GraphNode>("pick");
+  graph_->start();
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
+  auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
+    node_->get_node_base_interface(),
+    node_->get_node_timers_interface());
+  tf_buffer_->setCreateTimerInterface(timer_interface);
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   pick_action_sent_ = false;
 }
 
@@ -52,18 +60,26 @@ geometry_msgs::msg::PoseStamped
 Pick::getObjectTF(std::string id)
 {
   // read graph to take the tf
-
-  // dummy solution
+  std::vector<ros2_knowledge_graph::Edge> tf_edges;
+  graph_->get_edges("world", id, "tf_static", tf_edges);
   geometry_msgs::msg::PoseStamped object_pose;
-	object_pose.pose.position.x = 0.62;
-	object_pose.pose.position.y = -0.13;
-	object_pose.pose.position.z = 0.43;
-  object_pose.pose.orientation.x = 0.0;
-  object_pose.pose.orientation.y = 0.0;
-  object_pose.pose.orientation.z = 0.707;
-	object_pose.pose.orientation.w = 0.707;
-	object_pose.header.frame_id = "base_footprint";
-	object_pose.header.stamp = node_->now();
+  
+  for (auto edge : tf_edges)
+  {    
+    try {
+      // Check if the transform is available
+      auto tf = tf_buffer_->lookupTransform("base_footprint", id, tf2::TimePointZero);
+      object_pose.pose.position.x = tf.transform.translation.x;
+      object_pose.pose.position.y = tf.transform.translation.y;
+      object_pose.pose.position.z = tf.transform.translation.z;
+      object_pose.pose.orientation = tf.transform.rotation;
+      object_pose.header.frame_id = "base_footprint";
+      object_pose.header.stamp = node_->now();
+    } catch (tf2::TransformException & e) {
+      RCLCPP_WARN(node_->get_logger(), "%s", e.what());
+    }
+  }
+
   return object_pose;
 }
 
@@ -81,7 +97,6 @@ Pick::tick()
     pick_pub_->publish(msg);
     pick_action_sent_ = true;
   }
-
   rclcpp::spin_some(node_);
 
   if (result_ == 0)

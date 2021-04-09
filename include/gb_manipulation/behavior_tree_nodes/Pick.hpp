@@ -22,6 +22,16 @@
 #include "behaviortree_cpp_v3/bt_factory.h"
 #include "moveit_msgs/msg/grasp.hpp"
 #include "moveit_msgs/msg/move_it_error_codes.hpp"
+#include "ros2_knowledge_graph/GraphNode.hpp"
+
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include "tf2/transform_datatypes.h"
+#include "tf2/LinearMath/Transform.h"
+#include "tf2_msgs/msg/tf_message.hpp"
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/create_timer_ros.h"
+#include "tf2_ros/transform_broadcaster.h"
+#include "tf2_ros/transform_listener.h"
 
 namespace gb_manipulation
 {
@@ -49,6 +59,9 @@ private:
   rclcpp::Node::SharedPtr node_;
   rclcpp::Publisher<moveit_msgs::msg::Grasp>::SharedPtr pick_pub_;
   rclcpp::Subscription<moveit_msgs::msg::MoveItErrorCodes>::SharedPtr result_sub_;
+  std::shared_ptr<ros2_knowledge_graph::GraphNode> graph_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
 
   int result_;
   bool pick_action_sent_;
