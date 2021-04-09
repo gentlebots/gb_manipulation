@@ -33,6 +33,42 @@ Place::Place(
     "/moveit/result",
     1,
     std::bind(&Place::resultCallback, this, std::placeholders::_1));
+    
+  rclcpp::Node::SharedPtr bt_node;
+  config().blackboard->get("node", bt_node);
+
+  if (!bt_node->has_parameter("place_locations")) {
+    bt_node->declare_parameter("place_locations");
+  }
+
+  if (!bt_node->has_parameter("place_locations_coords")) {
+    bt_node->declare_parameter("place_locations_coords");
+  }
+
+  if (bt_node->has_parameter("place_locations")) {
+    std::vector<std::string> place_names;
+
+    bt_node->get_parameter_or("place_locations", place_names, {});
+
+    for (auto & place : place_names) {
+      if (!bt_node->has_parameter("place_locations_coords." + place)) {
+        bt_node->declare_parameter("place_locations_coords." + place);
+      }
+
+      std::vector<double> coords;
+      if (bt_node->get_parameter_or("place_locations_coords." + place, coords, {})) {
+        geometry_msgs::msg::Pose2D pose;
+        pose.x = coords[0];
+        pose.y = coords[1];
+        pose.theta = coords[2];
+
+        places_[place] = pose;
+      } else {
+        std::cerr << "No coordinate configured for waypoint [" << place << "]" << std::endl;
+      }
+    }
+  }
+
   place_action_sent_ = false;
 }
 
@@ -49,21 +85,23 @@ Place::resultCallback(const moveit_msgs::msg::MoveItErrorCodes::SharedPtr msg)
 }
 
 geometry_msgs::msg::PoseStamped 
-Place::getObjectTF(std::string id)
+Place::getPlacePos(std::string id)
 {
-  // read graph to take the tf
-
-  // dummy solution
   geometry_msgs::msg::PoseStamped object_pose;
-	object_pose.pose.position.x = 0.62;
-	object_pose.pose.position.y = 0.13;
-	object_pose.pose.position.z = 0.43;
-  object_pose.pose.orientation.x = 0.0;
-  object_pose.pose.orientation.y = 0.0;
-  object_pose.pose.orientation.z = 0.707;
-	object_pose.pose.orientation.w = 0.707;
-	object_pose.header.frame_id = "base_footprint";
-	object_pose.header.stamp = node_->now();
+  if (places_.find(id) != places_.end()) 
+  {
+    auto pos = places_[id];
+    object_pose.header.frame_id = "map";
+    object_pose.pose.position.x = pos.x;
+    object_pose.pose.position.y = pos.y;
+    object_pose.pose.position.z = 0;
+    object_pose.pose.orientation = tf2::toMsg(tf2::Quaternion(0.0, 0.0, 0.0, 1.0));
+  }
+  else
+  {
+    std::cerr << "No coordinate for waypoint [" << id << "]" << std::endl;
+  }
+  
   return object_pose;
 }
 
@@ -77,7 +115,7 @@ Place::tick()
     RCLCPP_INFO(node_->get_logger(), "Placing a %s", goal.c_str());
     moveit_msgs::msg::PlaceLocation msg;
     msg.id = goal;
-    msg.place_pose = getObjectTF(goal);
+    msg.place_pose = getPlacePos(goal);
     place_pub_->publish(msg);
     result_ = 0;
     place_action_sent_ = true;
