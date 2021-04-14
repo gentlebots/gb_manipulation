@@ -27,6 +27,13 @@
 #include "moveit_msgs/msg/move_it_error_codes.hpp"
 
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include "tf2/transform_datatypes.h"
+#include "tf2/LinearMath/Transform.h"
+#include "tf2_msgs/msg/tf_message.hpp"
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/create_timer_ros.h"
+#include "tf2_ros/transform_broadcaster.h"
+#include "tf2_ros/transform_listener.h"
 
 namespace gb_manipulation
 {
@@ -40,7 +47,7 @@ public:
 
   void halt();
   BT::NodeStatus tick();
-  geometry_msgs::msg::PoseStamped getPlacePos(std::string id);
+  bool getPlacePos(std::string id, geometry_msgs::msg::PoseStamped & pose);
   void resultCallback(const moveit_msgs::msg::MoveItErrorCodes::SharedPtr msg);
 
   static BT::PortsList providedPorts()
@@ -54,7 +61,9 @@ private:
   rclcpp::Node::SharedPtr node_;
   rclcpp::Publisher<moveit_msgs::msg::PlaceLocation>::SharedPtr place_pub_;
   rclcpp::Subscription<moveit_msgs::msg::MoveItErrorCodes>::SharedPtr result_sub_;
-  std::map<std::string, geometry_msgs::msg::Pose2D> places_;
+  std::map<std::string, geometry_msgs::msg::Point> places_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   int result_;
   bool place_action_sent_;
 };

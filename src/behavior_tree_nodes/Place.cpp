@@ -37,6 +37,13 @@ Place::Place(
   rclcpp::Node::SharedPtr bt_node;
   config().blackboard->get("node", bt_node);
 
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
+  auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
+    node_->get_node_base_interface(),
+    node_->get_node_timers_interface());
+  tf_buffer_->setCreateTimerInterface(timer_interface);
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
   if (!bt_node->has_parameter("place_locations")) {
     bt_node->declare_parameter("place_locations");
   }
@@ -57,12 +64,11 @@ Place::Place(
 
       std::vector<double> coords;
       if (bt_node->get_parameter_or("place_locations_coords." + place, coords, {})) {
-        geometry_msgs::msg::Pose2D pose;
-        pose.x = coords[0];
-        pose.y = coords[1];
-        pose.theta = coords[2];
-
-        places_[place] = pose;
+        geometry_msgs::msg::Point point;
+        point.x = coords[0];
+        point.y = coords[1];
+        point.z = coords[2];
+        places_[place] = point;
       } else {
         std::cerr << "No coordinate configured for waypoint [" << place << "]" << std::endl;
       }
@@ -84,25 +90,39 @@ Place::resultCallback(const moveit_msgs::msg::MoveItErrorCodes::SharedPtr msg)
   result_ = msg->val;
 }
 
-geometry_msgs::msg::PoseStamped 
-Place::getPlacePos(std::string id)
+bool
+Place::getPlacePos(std::string id, geometry_msgs::msg::PoseStamped & pose)
 {
-  geometry_msgs::msg::PoseStamped object_pose;
   if (places_.find(id) != places_.end()) 
   {
     auto pos = places_[id];
-    object_pose.header.frame_id = "map";
-    object_pose.pose.position.x = pos.x;
-    object_pose.pose.position.y = pos.y;
-    object_pose.pose.position.z = 0;
-    object_pose.pose.orientation = tf2::toMsg(tf2::Quaternion(0.0, 0.0, 0.0, 1.0));
+    try {
+      // Check if the transform is available
+      auto tf = tf_buffer_->lookupTransform("base_footprint", "map", tf2::TimePointZero, tf2::durationFromSec(2.0));
+      tf2::Transform bf2map, map2placePose, bf2placePose;
+      tf2::fromMsg(tf.transform, bf2map);
+      map2placePose.setOrigin({pos.x, pos.y, pos.z});
+      bf2placePose = bf2map * map2placePose;
+
+      pose.header.frame_id = "base_footprint";
+      pose.pose.position.x = bf2placePose.getOrigin().x();
+      pose.pose.position.y = bf2placePose.getOrigin().y();
+      pose.pose.position.z = bf2placePose.getOrigin().z();
+      pose.pose.orientation = tf2::toMsg(tf2::Quaternion(0.0, 0.0, 0.0, 1.0));
+      pose.header.stamp = node_->now();
+
+    } catch (tf2::TransformException & e) {
+      RCLCPP_WARN(node_->get_logger(), "%s", e.what());
+      return false;
+    }
   }
   else
   {
     std::cerr << "No coordinate for waypoint [" << id << "]" << std::endl;
+    return false;
   }
   
-  return object_pose;
+  return true;
 }
 
 BT::NodeStatus
@@ -112,13 +132,19 @@ Place::tick()
   {
     std::string goal;
     getInput<std::string>("goal", goal);
-    RCLCPP_INFO(node_->get_logger(), "Placing a %s", goal.c_str());
+    RCLCPP_INFO(node_->get_logger(), "Placing to %s", goal.c_str());
     moveit_msgs::msg::PlaceLocation msg;
     msg.id = goal;
-    msg.place_pose = getPlacePos(goal);
-    place_pub_->publish(msg);
-    result_ = 0;
-    place_action_sent_ = true;
+    if (getPlacePos(goal, msg.place_pose))
+    {
+      place_pub_->publish(msg);
+      result_ = 0;
+      place_action_sent_ = true;
+    }
+    else
+    {
+      RCLCPP_ERROR(node_->get_logger(), "Place error, pose not finded");
+    }
   }
 
   rclcpp::spin_some(node_);

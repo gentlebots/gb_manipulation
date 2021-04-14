@@ -25,7 +25,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     # Get the launch directory
-    example_dir = get_package_share_directory('gb_manipulation')
+    pkg_dir = get_package_share_directory('gb_manipulation')
     namespace = LaunchConfiguration('namespace')
 
     declare_namespace_cmd = DeclareLaunchArgument(
@@ -44,23 +44,23 @@ def generate_launch_description():
         namespace=namespace,
         output='screen',
         parameters=[
-          example_dir + '/config/params.yaml',
+          pkg_dir + '/config/params.yaml',
           {
             'action_name': 'pick',
-            'bt_xml_file': example_dir + '/behavior_trees_xml/pick.xml'
+            'bt_xml_file': pkg_dir + '/behavior_trees_xml/pick.xml'
           }
         ])
     place_1_cmd = Node(
         package='plansys2_bt_actions',
         executable='bt_action_node',
-        name='pick_1',
+        name='place_1',
         namespace=namespace,
         output='screen',
         parameters=[
-          example_dir + '/config/params.yaml',
+          pkg_dir + '/config/params.yaml',
           {
             'action_name': 'place',
-            'bt_xml_file': example_dir + '/behavior_trees_xml/place.xml'
+            'bt_xml_file': pkg_dir + '/behavior_trees_xml/place.xml'
           }
         ])
 
@@ -72,5 +72,6 @@ def generate_launch_description():
     
     # Declare the launch options
     ld.add_action(pick_1_cmd)
+    ld.add_action(place_1_cmd)
   
     return ld
