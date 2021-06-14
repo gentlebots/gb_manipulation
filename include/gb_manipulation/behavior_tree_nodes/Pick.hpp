@@ -59,7 +59,7 @@ private:
   rclcpp::Node::SharedPtr node_;
   rclcpp::Publisher<moveit_msgs::msg::Grasp>::SharedPtr pick_pub_;
   rclcpp::Subscription<moveit_msgs::msg::MoveItErrorCodes>::SharedPtr result_sub_;
-  std::shared_ptr<ros2_knowledge_graph::GraphNode> graph_;
+  ros2_knowledge_graph::GraphNode * graph_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
 
