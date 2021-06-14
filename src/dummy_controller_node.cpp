@@ -35,10 +35,10 @@ public:
 
   void init()
   {
-    domain_expert_ = std::make_shared<plansys2::DomainExpertClient>(shared_from_this());
-    problem_expert_ = std::make_shared<plansys2::ProblemExpertClient>(shared_from_this());
-    executor_client_ = std::make_shared<plansys2::ExecutorClient>(shared_from_this());
-    planner_client_ = std::make_shared<plansys2::PlannerClient>(shared_from_this());
+    domain_expert_ = std::make_shared<plansys2::DomainExpertClient>();
+    problem_expert_ = std::make_shared<plansys2::ProblemExpertClient>();
+    executor_client_ = std::make_shared<plansys2::ExecutorClient>();
+    planner_client_ = std::make_shared<plansys2::PlannerClient>();
 
     init_knowledge();
 
