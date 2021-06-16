@@ -1,6 +1,6 @@
 <root main_tree_to_execute = "MainTree" >
     <BehaviorTree ID="MainTree">
-       <Sequence name="root_sequence">
+       <Sequence name="pick">
             <GetPickObject  name="get_pick_object" object_id="{object_id}"/>
             <GetPoseFromObject  name="get_pose_from_object" object_id="{object_id}" wp_pose="{pose}"/>
             <ApproachObject name="approach_object" object_pose="{pose}"/>
