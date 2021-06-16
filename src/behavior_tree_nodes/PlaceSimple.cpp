@@ -15,53 +15,66 @@
 #include <string>
 #include <iostream>
 
-#include "gb_manipulation/behavior_tree_nodes/Pick.hpp"
-
-#include "ros2_knowledge_graph_msgs/msg/edge.hpp"
-#include "ros2_knowledge_graph_msgs/msg/content.hpp"
+#include "gb_manipulation/behavior_tree_nodes/PlaceSimple.hpp"
 
 #include "behaviortree_cpp_v3/behavior_tree.h"
 
 namespace gb_manipulation
 {
 
-Pick::Pick(
+PlaceSimple::PlaceSimple(
   const std::string & xml_tag_name,
   const BT::NodeConfiguration & conf)
 : BT::ActionNodeBase(xml_tag_name, conf)
 {
-  node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
-  graph_ = ros2_knowledge_graph::GraphFactory::getInstance(node_);
-
-  pick_pub_ = node_->create_publisher<moveit_msgs::msg::Grasp>("/moveit/pick", 1);
+  node_ = rclcpp::Node::make_shared("place_action_comms");
+  place_pub_ = node_->create_publisher<moveit_msgs::msg::PlaceLocation>("/moveit/place", 1);
   result_sub_ = node_->create_subscription<moveit_msgs::msg::MoveItErrorCodes>(
     "/moveit/result",
     1,
-    std::bind(&Pick::resultCallback, this, std::placeholders::_1));
-  
+    std::bind(&PlaceSimple::resultCallback, this, std::placeholders::_1));
+    
+  rclcpp::Node::SharedPtr bt_node;
+  config().blackboard->get("node", bt_node);
+
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
   auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
     node_->get_node_base_interface(),
     node_->get_node_timers_interface());
   tf_buffer_->setCreateTimerInterface(timer_interface);
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
-  pick_action_sent_ = false;
+
+
+  place_action_sent_ = false;
 }
 
 void
-Pick::halt()
+PlaceSimple::halt()
 {
-  std::cout << "Pick halt" << std::endl;
+  std::cout << "PlaceSimple halt" << std::endl;
 }
 
 void 
-Pick::resultCallback(const moveit_msgs::msg::MoveItErrorCodes::SharedPtr msg)
+PlaceSimple::resultCallback(const moveit_msgs::msg::MoveItErrorCodes::SharedPtr msg)
 {
   result_ = msg->val;
 }
 
-geometry_msgs::msg::PoseStamped 
-Pick::pose2BaseFootprint(geometry_msgs::msg::PoseStamped input)
+double getYaw(geometry_msgs::msg::Quaternion mQ) {
+    
+  tf2::Quaternion tQ(
+      mQ.x,
+      mQ.y,
+      mQ.z,
+      mQ.w);
+  tf2::Matrix3x3 m(tQ);
+  double roll, pitch, yaw;
+  m.getRPY(roll, pitch, yaw);
+  return yaw;
+}
+
+
+geometry_msgs::msg::PoseStamped PlaceSimple::pose2BaseFootprint(geometry_msgs::msg::PoseStamped input)
 {
   tf2::Transform frame2bf, obj2frame, bf2Object;
   obj2frame.setOrigin({input.pose.position.x,
@@ -98,21 +111,27 @@ Pick::pose2BaseFootprint(geometry_msgs::msg::PoseStamped input)
 }
 
 BT::NodeStatus
-Pick::tick()
+PlaceSimple::tick()
 {
-  if (!pick_action_sent_)
+  if (!place_action_sent_)
   {
-    std::string object_id;
-    getInput<std::string>("object_id", object_id);
-    geometry_msgs::msg::PoseStamped object_pose;
-    getInput<geometry_msgs::msg::PoseStamped>("object_pose", object_pose);
-    RCLCPP_INFO(node_->get_logger(), "Picking a %s", object_id.c_str());
-    moveit_msgs::msg::Grasp msg;
-    msg.id = object_id;
-    msg.grasp_pose = pose2BaseFootprint(object_pose);
-    pick_pub_->publish(msg);
-    pick_action_sent_ = true;
+    geometry_msgs::msg::PoseStamped goal;
+    getInput<geometry_msgs::msg::PoseStamped>("goal", goal);    
+    RCLCPP_INFO(node_->get_logger(), "Placing to:  x:%f  y:%f  z:%f yaw:%f", 
+      goal.pose.position.x, 
+      goal.pose.position.y, 
+      goal.pose.position.z, 
+      getYaw(goal.pose.orientation));
+		
+    moveit_msgs::msg::PlaceLocation msg;
+    msg.place_pose = pose2BaseFootprint(goal);
+    place_pub_->publish(msg);
+    result_ = 0;
+    place_action_sent_ = true;
+    
   }
+
+  rclcpp::spin_some(node_);
 
   if (result_ == 0)
   {
@@ -126,7 +145,7 @@ Pick::tick()
   } 
   else
   {
-    RCLCPP_ERROR(node_->get_logger(), "Pick error: MoveItErrorCodes[%i]", result_);
+    RCLCPP_ERROR(node_->get_logger(), "PlaceSimple error: MoveItErrorCodes[%i]", result_);
     return BT::NodeStatus::FAILURE;
   }
 }
@@ -136,5 +155,5 @@ Pick::tick()
 #include "behaviortree_cpp_v3/bt_factory.h"
 BT_REGISTER_NODES(factory)
 {
-  factory.registerNodeType<gb_manipulation::Pick>("Pick");
+  factory.registerNodeType<gb_manipulation::PlaceSimple>("PlaceSimple");
 }

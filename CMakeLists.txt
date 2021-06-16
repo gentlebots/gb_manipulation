@@ -38,6 +38,8 @@ list(APPEND plugin_libs plansys2_pick_bt_node)
 add_library(plansys2_place_bt_node SHARED src/behavior_tree_nodes/Place.cpp)
 list(APPEND plugin_libs plansys2_place_bt_node)
 
+add_library(plansys2_place_simple_bt_node SHARED src/behavior_tree_nodes/PlaceSimple.cpp)
+list(APPEND plugin_libs plansys2_place_simple_bt_node)
 
 foreach(bt_plugin ${plugin_libs})
   ament_target_dependencies(${bt_plugin} ${dependencies})
