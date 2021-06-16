@@ -17,6 +17,9 @@
 
 #include "gb_manipulation/behavior_tree_nodes/Pick.hpp"
 
+#include "ros2_knowledge_graph_msgs/msg/edge.hpp"
+#include "ros2_knowledge_graph_msgs/msg/content.hpp"
+
 #include "behaviortree_cpp_v3/behavior_tree.h"
 
 namespace gb_manipulation
@@ -27,7 +30,9 @@ Pick::Pick(
   const BT::NodeConfiguration & conf)
 : BT::ActionNodeBase(xml_tag_name, conf)
 {
-  node_ = rclcpp::Node::make_shared("pick_action_comms");
+  node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
+  graph_ = ros2_knowledge_graph::GraphFactory::getInstance(node_);
+
   pick_pub_ = node_->create_publisher<moveit_msgs::msg::Grasp>("/moveit/pick", 1);
   result_sub_ = node_->create_subscription<moveit_msgs::msg::MoveItErrorCodes>(
     "/moveit/result",
@@ -108,7 +113,6 @@ Pick::tick()
     pick_pub_->publish(msg);
     pick_action_sent_ = true;
   }
-  rclcpp::spin_some(node_);
 
   if (result_ == 0)
   {
