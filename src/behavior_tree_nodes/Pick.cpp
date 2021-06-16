@@ -33,8 +33,7 @@ Pick::Pick(
     "/moveit/result",
     1,
     std::bind(&Pick::resultCallback, this, std::placeholders::_1));
-  graph_ = std::make_shared<ros2_knowledge_graph::GraphNode>("pick");
-  graph_->start();
+  
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
   auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
     node_->get_node_base_interface(),
@@ -57,27 +56,37 @@ Pick::resultCallback(const moveit_msgs::msg::MoveItErrorCodes::SharedPtr msg)
 }
 
 geometry_msgs::msg::PoseStamped 
-Pick::getObjectTF(std::string id)
+Pick::pose2BaseFootprint(geometry_msgs::msg::PoseStamped input)
 {
-  // read graph to take the tf
-  std::vector<ros2_knowledge_graph::Edge> tf_edges;
-  graph_->get_edges("world", id, "tf_static", tf_edges);
+  tf2::Transform frame2bf, obj2frame, bf2Object;
+  obj2frame.setOrigin({input.pose.position.x,
+                      input.pose.position.y,
+                      input.pose.position.z});
+  obj2frame.setRotation({input.pose.orientation.x,
+                        input.pose.orientation.y,
+                        input.pose.orientation.z,
+                        input.pose.orientation.w});
+
   geometry_msgs::msg::PoseStamped object_pose;
-  
-  for (auto edge : tf_edges)
-  {    
-    try {
-      // Check if the transform is available
-      auto tf = tf_buffer_->lookupTransform("base_footprint", id, tf2::TimePointZero);
-      object_pose.pose.position.x = tf.transform.translation.x;
-      object_pose.pose.position.y = tf.transform.translation.y;
-      object_pose.pose.position.z = tf.transform.translation.z;
-      object_pose.pose.orientation = tf.transform.rotation;
-      object_pose.header.frame_id = "base_footprint";
-      object_pose.header.stamp = node_->now();
-    } catch (tf2::TransformException & e) {
-      RCLCPP_WARN(node_->get_logger(), "%s", e.what());
-    }
+  try {
+    // Check if the transform is available
+    auto tf = tf_buffer_->lookupTransform(
+      object_pose.header.frame_id, "base_footprint", tf2::TimePointZero);
+    
+    tf2::fromMsg(tf.transform, frame2bf);
+    bf2Object =  obj2frame * frame2bf;
+    
+    object_pose.pose.position.x = bf2Object.getOrigin().x();
+    object_pose.pose.position.y = bf2Object.getOrigin().y();
+    object_pose.pose.position.z = bf2Object.getOrigin().z();
+    object_pose.pose.orientation.x = bf2Object.getRotation().x();
+    object_pose.pose.orientation.y = bf2Object.getRotation().y();
+    object_pose.pose.orientation.z = bf2Object.getRotation().z();
+    object_pose.pose.orientation.w = bf2Object.getRotation().w();
+    object_pose.header.frame_id = "base_footprint";
+    object_pose.header.stamp = node_->now();
+  } catch (tf2::TransformException & e) {
+    RCLCPP_WARN(node_->get_logger(), "%s", e.what());
   }
 
   return object_pose;
@@ -88,12 +97,14 @@ Pick::tick()
 {
   if (!pick_action_sent_)
   {
-    std::string goal;
-    getInput<std::string>("goal", goal);
-    RCLCPP_INFO(node_->get_logger(), "Picking a %s", goal.c_str());
+    std::string object_id;
+    getInput<std::string>("object_id", object_id);
+    geometry_msgs::msg::PoseStamped object_pose;
+    getInput<geometry_msgs::msg::PoseStamped>("object_pose", object_pose);
+    RCLCPP_INFO(node_->get_logger(), "Picking a %s", object_id.c_str());
     moveit_msgs::msg::Grasp msg;
-    msg.id = goal;
-    msg.grasp_pose = getObjectTF(goal);
+    msg.id = object_id;
+    msg.grasp_pose = pose2BaseFootprint(object_pose);
     pick_pub_->publish(msg);
     pick_action_sent_ = true;
   }

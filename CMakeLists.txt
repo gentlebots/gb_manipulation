@@ -44,8 +44,8 @@ foreach(bt_plugin ${plugin_libs})
   target_compile_definitions(${bt_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
 
-add_executable(dummy_controller_node src/dummy_controller_node.cpp)
-ament_target_dependencies(dummy_controller_node ${dependencies})
+#add_executable(dummy_controller_node src/dummy_controller_node.cpp)
+#ament_target_dependencies(dummy_controller_node ${dependencies})
 
 add_executable(worldtf_to_map src/utils/worldtf_to_map.cpp)
 ament_target_dependencies(worldtf_to_map ${dependencies})
@@ -53,7 +53,7 @@ ament_target_dependencies(worldtf_to_map ${dependencies})
 install(DIRECTORY launch pddl behavior_trees_xml config DESTINATION share/${PROJECT_NAME})
 
 install(TARGETS
-  dummy_controller_node
+  #dummy_controller_node
   worldtf_to_map
   ${plugin_libs}
   ARCHIVE DESTINATION lib

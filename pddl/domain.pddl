@@ -17,7 +17,7 @@
 
 (subzone_at ?sz - subzone ?z - zone)
 (free ?sz - subzone)
-(object_picked ?r - robot ?o - object)
+(object_picked ?r - robot ?o - object ?z - zone)
 
 );; end Predicates ;;;;;;;;;;;;;;;;;;;;
 
@@ -28,12 +28,13 @@
 );; end Functions ;;;;;;;;;;;;;;;;;;;;
 ;; Actions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (:durative-action pick
-    :parameters (?r - robot ?o - object)
+    :parameters (?r - robot ?o - object ?z - zone)
     :duration ( = ?duration 5)
     :condition (and
+        (over all(robot_at ?r ?z))
     )
     :effect (and
-        (at end(object_picked ?r ?o))
+        (at end(object_picked ?r ?o ?z))
     )
 )
 
@@ -42,7 +43,6 @@
     :duration ( = ?duration 5)
     :condition (and
         (over all(robot_at ?r ?z))
-        (over all(object_picked ?r ?o))
         (over all(subzone_at ?sz ?z))
         (at start(free ?sz))
     )

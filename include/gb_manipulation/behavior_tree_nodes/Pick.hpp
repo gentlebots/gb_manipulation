@@ -45,13 +45,15 @@ public:
 
   void halt();
   BT::NodeStatus tick();
-  geometry_msgs::msg::PoseStamped getObjectTF(std::string id);
+  geometry_msgs::msg::PoseStamped 
+    pose2BaseFootprint(geometry_msgs::msg::PoseStamped input);
   void resultCallback(const moveit_msgs::msg::MoveItErrorCodes::SharedPtr msg);
 
   static BT::PortsList providedPorts()
   {
     return {
-      BT::InputPort<std::string>("goal")
+      BT::InputPort<std::string>("object_id"),
+      BT::InputPort<geometry_msgs::msg::PoseStamped>("object_pose")
     };
   }
 

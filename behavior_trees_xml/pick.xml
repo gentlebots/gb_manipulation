@@ -1,8 +1,10 @@
 <root main_tree_to_execute = "MainTree" >
     <BehaviorTree ID="MainTree">
        <Sequence name="root_sequence">
-           <Pick  name="pick" goal="${arg1}"/>
-           <!--<Place name="place" goal="${arg1}"/>-->
+            <GetPickObject  name="get_pick_object" object_id="{object_id}"/>
+            <GetPoseFromObject  name="get_pose_from_object" object_id="{object_id}" wp_pose="{pose}"/>
+            <ApproachObject name="approach_object" object_pose="{pose}"/>
+            <Pick name="pick" object_id="{object_id}" object_pose="${pose}"/>
        </Sequence>
     </BehaviorTree>
 </root>
