@@ -5,6 +5,7 @@ pick_1:
       - gb_get_pick_object_bt_node
       - gb_get_pose_from_object_bt_node
       - gb_approach_object_bt_node
+      - gb_select_pick_bt_node
 place_1:
   ros__parameters:
     plugins:
