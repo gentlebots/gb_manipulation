@@ -19,8 +19,11 @@
 
 #include "ros2_knowledge_graph_msgs/msg/edge.hpp"
 #include "ros2_knowledge_graph_msgs/msg/content.hpp"
+#include "ros2_knowledge_graph/graph_utils.hpp"
 
 #include "behaviortree_cpp_v3/behavior_tree.h"
+
+using namespace std::chrono_literals;
 
 namespace gb_manipulation
 {
@@ -38,7 +41,6 @@ Pick::Pick(
     "/moveit/result",
     1,
     std::bind(&Pick::resultCallback, this, std::placeholders::_1));
-  
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
   auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
     node_->get_node_base_interface(),
@@ -46,6 +48,7 @@ Pick::Pick(
   tf_buffer_->setCreateTimerInterface(timer_interface);
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   pick_action_sent_ = false;
+  result_ = 0;
 }
 
 void
@@ -58,16 +61,17 @@ void
 Pick::resultCallback(const moveit_msgs::msg::MoveItErrorCodes::SharedPtr msg)
 {
   result_ = msg->val;
+  RCLCPP_INFO(node_->get_logger(), "---------- resultCallback: %i", result_);
 }
 
 geometry_msgs::msg::PoseStamped 
 Pick::pose2BaseFootprint(geometry_msgs::msg::PoseStamped input)
 {
-  tf2::Transform frame2bf, obj2frame, bf2Object;
-  obj2frame.setOrigin({input.pose.position.x,
+  tf2::Transform bf2frame, frame2obj, bf2Object;
+  frame2obj.setOrigin({input.pose.position.x,
                       input.pose.position.y,
                       input.pose.position.z});
-  obj2frame.setRotation({input.pose.orientation.x,
+  frame2obj.setRotation({input.pose.orientation.x,
                         input.pose.orientation.y,
                         input.pose.orientation.z,
                         input.pose.orientation.w});
@@ -78,8 +82,8 @@ Pick::pose2BaseFootprint(geometry_msgs::msg::PoseStamped input)
     auto tf = tf_buffer_->lookupTransform(
       input.header.frame_id, "base_footprint", tf2::TimePointZero);
     
-    tf2::fromMsg(tf.transform, frame2bf);
-    bf2Object =  obj2frame * frame2bf;
+    tf2::fromMsg(tf.transform, bf2frame);
+    bf2Object = bf2frame * frame2obj;
     
     object_pose.pose.position.x = bf2Object.getOrigin().x();
     object_pose.pose.position.y = bf2Object.getOrigin().y();
@@ -114,6 +118,12 @@ Pick::tick()
     pick_action_sent_ = true;
   }
 
+  if (node_->now() > (timer_ + 30s))
+  {
+    result_ = 99999;
+    RCLCPP_ERROR(node_->get_logger(), "Timeout reached. Pick error: MoveItErrorCodes[%i]. Jumping to the next step!", result_);
+  }
+
   if (result_ == 0)
   {
     return BT::NodeStatus::RUNNING;
@@ -127,8 +137,8 @@ Pick::tick()
   else
   {
     RCLCPP_ERROR(node_->get_logger(), "Pick error: MoveItErrorCodes[%i]", result_);
-    return BT::NodeStatus::FAILURE;
-  }
+    return BT::NodeStatus::SUCCESS;
+  }  
 }
 
 }  // namespace gb_manipulation

@@ -33,6 +33,8 @@
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2_ros/transform_listener.h"
 
+#include "std_msgs/msg/string.hpp"
+
 namespace gb_manipulation
 {
 
@@ -67,6 +69,7 @@ private:
 
   int result_;
   bool pick_action_sent_;
+  rclcpp::Time timer_;
 };
 
 }  // namespace gb_manipulation

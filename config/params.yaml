@@ -9,4 +9,8 @@ pick_1:
 place_1:
   ros__parameters:
     plugins:
-      - plansys2_place_bt_node
+      - gb_get_placing_pose_bt_node
+      - gb_get_pose_from_object_bt_node
+      - gb_get_pick_object_bt_node
+      - plansys2_place_simple_bt_node
+      - gb_approach_object_bt_node
