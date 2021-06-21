@@ -4,8 +4,14 @@
             <SelectPick  name="select_pick"/>
             <GetPickObject  name="get_pick_object" object_id="{object_id}"/>
             <GetPoseFromObject  name="get_pose_from_object" object_id="{object_id}" wp_pose="{pose}"/>
-            <ApproachObject name="approach_object" object_pose="{pose}"/>
-            <Pick name="pick" object_id="{object_id}" object_pose="${pose}"/>
+            <Parallel success_threshold="1" failure_threshold="1">
+                <Track name="pick" pose="{pose}" />
+                <ApproachObject name="approach_object" object_pose="{pose}"/>
+            </Parallel>
+            <Parallel success_threshold="1" failure_threshold="1">
+                <Track name="pick" pose="{pose}" />
+                <Pick name="pick" object_id="{object_id}" object_pose="{pose}"/>
+            </Parallel>
        </Sequence>
     </BehaviorTree>
 </root>

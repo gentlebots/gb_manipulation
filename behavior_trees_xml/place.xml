@@ -11,7 +11,8 @@
       <Sequence name="place">
         <GetPickObject  name="get_pose_from_object" object_id="{object_id}"/> <!-- TODO: leer grafo y averiguar objeto con su tipo-->
         <GetPlacingPose  name="get_placing_pose" object="{object_id}" ob_pose="{pose}"/> <!-- TODO: lee el world model y decide donde va el objeto -->
-        <ApproachObject name="approach_object" object_pose="{pose}"/>   <!-- from bt_test_approach -->
+        <!--<ApproachObject name="approach_object" object_pose="{pose}"/-->
+        <Move name="move" goal="{pose}"/>
         <PlaceSimple  name="place" goal="{pose}"/>  <!-- from gb_manipulation -->
       </Sequence>
    </BehaviorTree>
