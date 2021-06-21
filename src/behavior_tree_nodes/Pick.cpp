@@ -80,7 +80,7 @@ Pick::pose2BaseFootprint(geometry_msgs::msg::PoseStamped input)
   try {
     // Check if the transform is available
     auto tf = tf_buffer_->lookupTransform(
-      input.header.frame_id, "base_footprint", tf2::TimePointZero);
+      "base_footprint", input.header.frame_id, tf2::TimePointZero);
     
     tf2::fromMsg(tf.transform, bf2frame);
     bf2Object = bf2frame * frame2obj;
@@ -88,10 +88,10 @@ Pick::pose2BaseFootprint(geometry_msgs::msg::PoseStamped input)
     object_pose.pose.position.x = bf2Object.getOrigin().x();
     object_pose.pose.position.y = bf2Object.getOrigin().y();
     object_pose.pose.position.z = bf2Object.getOrigin().z();
-    object_pose.pose.orientation.x = bf2Object.getRotation().x();
-    object_pose.pose.orientation.y = bf2Object.getRotation().y();
-    object_pose.pose.orientation.z = bf2Object.getRotation().z();
-    object_pose.pose.orientation.w = bf2Object.getRotation().w();
+    object_pose.pose.orientation.x = 0.0;
+    object_pose.pose.orientation.y = 0.0;
+    object_pose.pose.orientation.z = 0.0;
+    object_pose.pose.orientation.w = 1.0;
     object_pose.header.frame_id = "base_footprint";
     object_pose.header.stamp = node_->now();
   } catch (tf2::TransformException & e) {
@@ -116,9 +116,10 @@ Pick::tick()
     msg.grasp_pose = pose2BaseFootprint(object_pose);
     pick_pub_->publish(msg);
     pick_action_sent_ = true;
+    timer_ = node_->now();
   }
 
-  if (node_->now() > (timer_ + 30s))
+  if (node_->now() > (timer_ + 60s))
   {
     result_ = 99999;
     RCLCPP_ERROR(node_->get_logger(), "Timeout reached. Pick error: MoveItErrorCodes[%i]. Jumping to the next step!", result_);
