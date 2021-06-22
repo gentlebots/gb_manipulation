@@ -85,13 +85,16 @@ Pick::pose2BaseFootprint(geometry_msgs::msg::PoseStamped input)
     tf2::fromMsg(tf.transform, bf2frame);
     bf2Object = bf2frame * frame2obj;
     
-    object_pose.pose.position.x = bf2Object.getOrigin().x();
-    object_pose.pose.position.y = bf2Object.getOrigin().y();
-    object_pose.pose.position.z = bf2Object.getOrigin().z();
-    object_pose.pose.orientation.x = 0.0;
-    object_pose.pose.orientation.y = 0.0;
-    object_pose.pose.orientation.z = 0.0;
-    object_pose.pose.orientation.w = 1.0;
+    object_pose.pose.position.x = bf2Object.getOrigin().x() - 0.038/2;
+    object_pose.pose.position.y = bf2Object.getOrigin().y() - 0.089/2; 
+    object_pose.pose.position.z = bf2Object.getOrigin().z() - 0.175/2;
+    auto q = bf2Object.getRotation();
+    tf2::Quaternion q_b;
+    q_b.setRPY(0.0, 0.0, q.getAngle());
+    object_pose.pose.orientation.x = q_b.getX();
+    object_pose.pose.orientation.y = q_b.getY();
+    object_pose.pose.orientation.z = q_b.getZ();
+    object_pose.pose.orientation.w = q_b.getW();
     object_pose.header.frame_id = "base_footprint";
     object_pose.header.stamp = node_->now();
   } catch (tf2::TransformException & e) {
@@ -119,7 +122,7 @@ Pick::tick()
     timer_ = node_->now();
   }
 
-  if (node_->now() > (timer_ + 60s))
+  if (node_->now() > (timer_ + 240s))
   {
     result_ = 99999;
     RCLCPP_ERROR(node_->get_logger(), "Timeout reached. Pick error: MoveItErrorCodes[%i]. Jumping to the next step!", result_);

@@ -8,6 +8,8 @@
                 <Track name="pick" pose="{pose}" />
                 <ApproachObject name="approach_object" object_pose="{pose}"/>
             </Parallel>
+            <Wait seconds="3"/>
+            <GetPoseFromObject  name="get_pose_from_object" object_id="{object_id}" wp_pose="{pose}"/>
             <Parallel success_threshold="1" failure_threshold="1">
                 <Track name="pick" pose="{pose}" />
                 <Pick name="pick" object_id="{object_id}" object_pose="{pose}"/>
